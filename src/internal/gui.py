@@ -6,8 +6,8 @@ class GUI:
         self.connection = connection
         self.root = tk.Tk()
         self.root.title("Bluetooth Chat")
-        self.message_listbox = tk.Listbox(self.root, width=50, height=20)
-        self.message_listbox.pack(padx=10, pady=10)
+        self.message_scrolledtext = scrolledtext.ScrolledText(self.root, width=50, height=20, state='disabled')
+        self.message_scrolledtext.pack(padx=10, pady=10)
         self.message_entry = tk.Entry(self.root, width=50)
         self.message_entry.pack(padx=10, pady=10)
         self.send_button = tk.Button(self.root, text="Send", command=self.send_message)
@@ -16,18 +16,22 @@ class GUI:
         self.connect_button.pack(padx=10, pady=10)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-    def add_message(self, message, is_own_message=False):
-        if is_own_message:
-            self.message_listbox.insert(tk.END, message, 'right_align')
+    def add_message(self, message, is_me=False):
+        if is_me:
+            tag = 'me'
         else:
-            self.message_listbox.insert(tk.END, message)
-        self.message_listbox.itemconfig(tk.END, bg='#e6e6e6', fg='#000000', selectbackground='#0078d7', selectforeground='white')
-
+            tag = 'other'
+        self.message_scrolledtext.tag_configure('me', foreground='blue') 
+        self.message_scrolledtext.configure(state='normal')
+        self.message_scrolledtext.insert(tk.END, message + '\n', tag)
+        self.message_scrolledtext.configure(state='disabled')
 
     def send_message(self):
         message = self.message_entry.get()
         self.message_entry.delete(0, tk.END)
-        self.add_message(message, is_own_message=True)
+        
+        chat_message = "Me: " + message
+        self.add_message(chat_message, is_me=True)
         self.connection.send_message(message)
 
     def connect_to_server(self):

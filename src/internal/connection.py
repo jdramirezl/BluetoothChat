@@ -7,7 +7,11 @@ from .gui import GUI
 class Connection:
     def __init__(self):
         self.client_sockets = []
+        self.bt_socket = self.get_socket()
 
+    def get_socket(self):
+        return socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+    
     def set_gui(self, gui):
         self.chat_gui = gui
     
@@ -19,11 +23,10 @@ class Connection:
         port = 7
         backlog = 1
         
-        self.server_socket = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        self.server_socket.bind((host_mac, port)) # Use any free Bluetooth port
-        self.server_socket.listen(backlog)
+        self.bt_socket.bind((host_mac, port)) # Use any free Bluetooth port
+        self.bt_socket.listen(backlog)
+        port = self.bt_socket.getsockname()[1]
         
-        port = self.server_socket.getsockname()[1]
         self.chat_gui.add_message("Waiting for incoming connections on port " + str(port) + "...")
         
         accept_thread = threading.Thread(target=self.accept_connections)
@@ -32,14 +35,6 @@ class Connection:
     def accept_messages(self):
         accept_thread = threading.Thread(target=self.accept_connections)
         accept_thread.start()
-
-    def accept_connections(self):
-        while True:
-            client_socket, client_address = self.server_socket.accept()
-            self.chat_gui.add_message("Connected from " + str(client_address))
-            self.client_sockets.append(client_socket)
-            receive_thread = threading.Thread(target=self.receive_message, args=(client_socket,))
-            receive_thread.start()
     
     def receive_message(self, client_socket):
         ChatName = client_socket.recv(1024).decode()
@@ -57,13 +52,25 @@ class Connection:
             encoded_message = bytes(message, "utf-8")
             client_socket.send(encoded_message)
     
-    def start_client(self):
-        target_mac = "14:F6:D8:32:D4:89" # Replace with the MAC address of your Bluetooth adapter
+    def accept_connections(self):
+        while True:
+            client_socket, client_address = self.bt_socket.accept()
+            self.chat_gui.add_message("Connected from " + str(client_address))
+            
+            if client_socket not in self.client_sockets:
+                self.client_sockets.append(client_socket)
+            
+            receive_thread = threading.Thread(target=self.receive_message, args=(client_socket,))
+            receive_thread.start()
+    
+    def start_client(self, target_mac = "14:F6:D8:32:D4:89"):
         port = 7
         
-        client_socket = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+        client_socket = self.get_socket()
         client_socket.connect((target_mac, port))
         self.client_sockets.append(client_socket)
+        
+        
         self.chat_gui.add_message("Connected to " + str(target_mac))
         self.send_message("PENEMASTER")
         
