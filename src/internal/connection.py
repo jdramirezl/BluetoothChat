@@ -1,82 +1,145 @@
 import socket
 import threading
 from .gui import GUI 
-
+import uuid
 
 
 class Connection:
     def __init__(self):
+        # List for client connections
         self.client_sockets = []
+
+        # Bluetooth socket for self machine. To act as server
         self.bt_socket = self.get_socket()
 
-    def get_socket(self):
-        return socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+        # Self MAC address
+        self.self_host = "00:1A:7D:DA:71:13"
+
+        # Target MAC address
+        self.target_host = "14:F6:D8:32:D4:89"
+
+        # Connection port
+        self.connection_port = 7
+
+        # Commands
+        self.self_name = uuid.uuid4().hex[:8]
+        self.set_commands()
+
+
+    # Setters and getters
+    def set_commands(self):
+        self.commands = {
+            'name_change': '/NAMECHANGE:',
+            'disconnect': '/DISCONNECT'
+        }
+
+    def get_socket(self): # Creates a BT socket
+        s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+        s.setblocking(False) 
+        return s
     
-    def set_gui(self, gui):
+    def set_gui(self, gui): # Sets the GUI
         self.chat_gui = gui
     
-    def set_server_socket(self):
+    def set_name(self, name): # Sets our name and sends it to the other party
+        self.self_name = name
+        self.send_message(self.commands['name_change'] + self.self_name)
+
+    # BT functions --------------------------------
+    # Start
+    def start(self): # Starts the connection
         self.start_server()
-    
-    def start_server(self):
-        host_mac = "00:1A:7D:DA:71:13" # Replace with the MAC address of your Bluetooth adapter
-        port = 7
-        backlog = 1
+
+    # Close
+    def close(self):
+            for client_socket in self.client_sockets:
+                client_socket.close()
+
+    # Server functions --------------------------------
+
+    # Starts the server
+    def start_server(self): 
+        host_mac = self.self_host 
+        port = self.connection_port
+        backlog = 2 
         
-        self.bt_socket.bind((host_mac, port)) # Use any free Bluetooth port
+        self.bt_socket.bind((host_mac, port))
         self.bt_socket.listen(backlog)
+
         port = self.bt_socket.getsockname()[1]
-        
         self.chat_gui.add_message("Waiting for incoming connections on port " + str(port) + "...")
         
-        accept_thread = threading.Thread(target=self.accept_connections)
-        accept_thread.start()
+        self.accept_connections()
 
-    def accept_messages(self):
+    # Creates a thread to accept incoming connections
+    def accept_connections(self): 
         accept_thread = threading.Thread(target=self.accept_connections)
         accept_thread.start()
     
-    def receive_message(self, client_socket):
-        ChatName = client_socket.recv(1024).decode()
+    # Accepts incoming connections
+    def receive_connections(self): 
         while True:
-            data = client_socket.recv(1024)
-            if not data or data.decode() == "quit":
+            # Accepts the connection
+            client_socket, client_address = self.bt_socket.accept()
+            self.chat_gui.add_message("Connected from " + str(client_address))
+            
+            # When we accept the connection we want it to be two-way, we add it to our clients
+            # If the client is not in the list, we add it
+            if client_socket not in self.client_sockets:
+                self.client_sockets.append(client_socket)
+            
+            # We create a new thread to receive messages from the client
+            self.accept_messages( client_socket)
+
+    # Create a thread to receive messages from the client
+    def accept_messages(self, client_socket):
+        receive_thread = threading.Thread(target=self.receive_message, args=(client_socket,))
+        receive_thread.start()
+
+    # Receives messages from an specific client
+    def receive_message(self, client_socket): 
+        ChatName = "Unknown"
+        while True:
+            data = client_socket.recv(1024) # Receives data from the client
+
+            # If there is no data or the data is the disconnect command, we close the connection
+            if not data or data.decode() == self.commands['disconnect']:
                 print("Closing connection to " + str(client_socket.getpeername()))
                 break
             
+            # If the data is a name change command, we change the name
+            nchange = self.commands['name_change']
+            if data.decode().startswith(nchange):
+                ChatName = data.decode().replace(nchange, "")
+                continue
+            
+            # If the data is not a name change command, we print the message
             self.chat_gui.add_message(ChatName + ": " + data.decode())
+
     
-    
+
+    # Client functions --------------------------------
+
+    # Sends a message to all connections
     def send_message(self, message):
         for client_socket in self.client_sockets:
             encoded_message = bytes(message, "utf-8")
             client_socket.send(encoded_message)
     
-    def accept_connections(self):
-        while True:
-            client_socket, client_address = self.bt_socket.accept()
-            self.chat_gui.add_message("Connected from " + str(client_address))
-            
-            if client_socket not in self.client_sockets:
-                self.client_sockets.append(client_socket)
-            
-            receive_thread = threading.Thread(target=self.receive_message, args=(client_socket,))
-            receive_thread.start()
-    
-    def start_client(self, target_mac = "14:F6:D8:32:D4:89"):
-        port = 7
-        
+    # Starts the client
+    def start_client(self): 
+        # Creates a new socket and connects to the target
+        target_mac = self.target_host
+        port = self.connection_port
+
         client_socket = self.get_socket()
         client_socket.connect((target_mac, port))
         self.client_sockets.append(client_socket)
         
-        
         self.chat_gui.add_message("Connected to " + str(target_mac))
-        self.send_message("PENEMASTER")
+        self.set_name(self.self_name)
         
-        self.accept_messages()
-    
-    def close(self):
-        for client_socket in self.client_sockets:
-            client_socket.close()
+        # Creates a new thread to receive messages from the client
+        self.accept_messages(client_socket)
+
 
