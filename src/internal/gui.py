@@ -16,12 +16,18 @@ class GUI:
         self.connect_button.pack(padx=10, pady=10)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-    def add_message(self, message):
-        self.message_listbox.insert(tk.END, message)
+    def add_message(self, message, is_own_message=False):
+        if is_own_message:
+            self.message_listbox.insert(tk.END, message, 'right_align')
+        else:
+            self.message_listbox.insert(tk.END, message)
+        self.message_listbox.itemconfig(tk.END, bg='#e6e6e6', fg='#000000', selectbackground='#0078d7', selectforeground='white')
+
 
     def send_message(self):
         message = self.message_entry.get()
         self.message_entry.delete(0, tk.END)
+        self.add_message(message, is_own_message=True)
         self.connection.send_message(message)
 
     def connect_to_server(self):
