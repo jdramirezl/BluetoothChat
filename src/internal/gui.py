@@ -15,7 +15,6 @@ class GUI:
         self.connect_button = tk.Button(self.root, text="Connect", command=self.connect_to_server)
         self.connect_button.pack(padx=10, pady=10)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
-        self.root.mainloop()
 
     def add_message(self, message):
         self.message_listbox.insert(tk.END, message)
@@ -26,8 +25,7 @@ class GUI:
         self.connection.send_message(message)
 
     def connect_to_server(self):
-        target_mac = "00:1A:7D:DA:71:13" # Replace with the MAC address of your Bluetooth adapter
-        self.connection.start_client(target_mac, 3)
+        self.connection.start_client()
 
     def receive_messages(self):
         while True:
