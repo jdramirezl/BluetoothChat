@@ -1,145 +1,48 @@
-import socket
 import threading
-from .gui import GUI 
-import uuid
+import asyncio
+from internal.gui import GUI
+from bleak import BleakScanner, BleakClient
+import bleak
 
 
 class Connection:
     def __init__(self):
-        # List for client connections
-        self.client_sockets = []
-
-        # Bluetooth socket for self machine. To act as server
-        self.bt_socket = self.get_socket()
-
-        # Self MAC address
-        self.self_host = "00:1A:7D:DA:71:13"
-
-        # Target MAC address
-        self.target_host = "14:F6:D8:32:D4:89"
-
-        # Connection port
-        self.connection_port = 7
-
-        # Commands
-        self.self_name = uuid.uuid4().hex[:8]
-        self.set_commands()
-
-
-    # Setters and getters
-    def set_commands(self):
-        self.commands = {
-            'name_change': '/NAMECHANGE:',
-            'disconnect': '/DISCONNECT'
-        }
-
-    def get_socket(self): # Creates a BT socket
-        s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        s.setblocking(False) 
-        return s
+        bleak.uuids.register_uuids("e8e10f95-1a70-4b27-9ccf-02010264e9c8")
+        self.charasteristic = "e8e10f95-1a70-4b27-9ccf-02010264e9c8"
     
-    def set_gui(self, gui): # Sets the GUI
+    async def set_connection(self):
+        self.chat_partner = await BleakScanner.find_device_by_address(
+            "05482813-D34D-6EC0-531C-9648CC1B6F94"
+        )
+        async with BleakClient(self.chat_partner) as client:
+            await client.connect()
+            services = await client.get_services()
+            for service in services:
+                print(service.uuid)
+
+    def set_gui(self, gui : GUI):
         self.chat_gui = gui
-    
-    def set_name(self, name): # Sets our name and sends it to the other party
-        self.self_name = name
-        self.send_message(self.commands['name_change'] + self.self_name)
+        
+    async def notification_handler(self, sender, data):
+        self.chat_gui.add_message(data, is_me=False)
 
-    # BT functions --------------------------------
-    # Start
-    def start(self): # Starts the connection
-        self.start_server()
+    async def start_message_server(self):
+        async with BleakClient(self.chat_partner) as client:
+            await client.start_notify(self.charasteristic, self.notification_handler)
+            while self.open:
+                await asyncio.sleep(1)
+            await client.stop_notify()
 
-    # Close
+
+    async def send_message(self, message):
+        async with BleakClient(self.chat_partner) as client:
+            await client.write_gatt_char(
+                self.charasteristic, message.encode()
+            )
+
+    def start(self):
+        self.open = True
+        threading.Thread(target=self.start_message_server)
+        
     def close(self):
-            for client_socket in self.client_sockets:
-                client_socket.close()
-
-    # Server functions --------------------------------
-
-    # Starts the server
-    def start_server(self): 
-        host_mac = self.self_host 
-        port = self.connection_port
-        backlog = 2 
-        
-        self.bt_socket.bind((host_mac, port))
-        self.bt_socket.listen(backlog)
-
-        port = self.bt_socket.getsockname()[1]
-        self.chat_gui.add_message("Waiting for incoming connections on port " + str(port) + "...")
-        
-        self.accept_connections()
-
-    # Creates a thread to accept incoming connections
-    def accept_connections(self): 
-        accept_thread = threading.Thread(target=self.accept_connections)
-        accept_thread.start()
-    
-    # Accepts incoming connections
-    def receive_connections(self): 
-        while True:
-            # Accepts the connection
-            client_socket, client_address = self.bt_socket.accept()
-            self.chat_gui.add_message("Connected from " + str(client_address))
-            
-            # When we accept the connection we want it to be two-way, we add it to our clients
-            # If the client is not in the list, we add it
-            if client_socket not in self.client_sockets:
-                self.client_sockets.append(client_socket)
-            
-            # We create a new thread to receive messages from the client
-            self.accept_messages( client_socket)
-
-    # Create a thread to receive messages from the client
-    def accept_messages(self, client_socket):
-        receive_thread = threading.Thread(target=self.receive_message, args=(client_socket,))
-        receive_thread.start()
-
-    # Receives messages from an specific client
-    def receive_message(self, client_socket): 
-        ChatName = "Unknown"
-        while True:
-            data = client_socket.recv(1024) # Receives data from the client
-
-            # If there is no data or the data is the disconnect command, we close the connection
-            if not data or data.decode() == self.commands['disconnect']:
-                print("Closing connection to " + str(client_socket.getpeername()))
-                break
-            
-            # If the data is a name change command, we change the name
-            nchange = self.commands['name_change']
-            if data.decode().startswith(nchange):
-                ChatName = data.decode().replace(nchange, "")
-                continue
-            
-            # If the data is not a name change command, we print the message
-            self.chat_gui.add_message(ChatName + ": " + data.decode())
-
-    
-
-    # Client functions --------------------------------
-
-    # Sends a message to all connections
-    def send_message(self, message):
-        for client_socket in self.client_sockets:
-            encoded_message = bytes(message, "utf-8")
-            client_socket.send(encoded_message)
-    
-    # Starts the client
-    def start_client(self): 
-        # Creates a new socket and connects to the target
-        target_mac = self.target_host
-        port = self.connection_port
-
-        client_socket = self.get_socket()
-        client_socket.connect((target_mac, port))
-        self.client_sockets.append(client_socket)
-        
-        self.chat_gui.add_message("Connected to " + str(target_mac))
-        self.set_name(self.self_name)
-        
-        # Creates a new thread to receive messages from the client
-        self.accept_messages(client_socket)
-
-
+        self.open = False

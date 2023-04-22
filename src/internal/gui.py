@@ -37,11 +37,6 @@ class GUI:
     def connect_to_server(self):
         self.connection.start_client()
 
-    def receive_messages(self):
-        while True:
-            message = self.connection.client_socket.recv(1024).decode()
-            self.add_message(message)
-
     def close(self):
         self.connection.close()
         self.root.destroy()

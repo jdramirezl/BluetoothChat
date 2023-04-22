@@ -1,13 +1,16 @@
 from internal.connection import Connection
 from internal.gui import GUI
+import asyncio
 
-def main():
+async def main():
     connection = Connection()
-    chat_gui = GUI(connection)
-    connection.set_gui(chat_gui)
-    connection.start()
-    chat_gui.start()
+    await connection.set_connection()
+    # chat_gui = GUI(connection)
+    # connection.set_gui(chat_gui)
+    # connection.start()
+    await connection.send_message("Hi")
+    # chat_gui.start()
     
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
