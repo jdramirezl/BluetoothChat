@@ -13,10 +13,10 @@ class Connection:
         self.bt_socket = self.get_socket()
 
         # Self MAC address
-        self.self_host = "00:1A:7D:DA:71:13"
+        self.self_host = "14:F6:D8:32:D4:89"
 
         # Target MAC address
-        self.target_host = "14:F6:D8:32:D4:89"
+        self.target_host = "00:1A:7D:DA:71:13"
 
         # Connection port
         self.connection_port = 7
@@ -35,7 +35,8 @@ class Connection:
 
     def get_socket(self): # Creates a BT socket
         s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        s.setblocking(False) 
+        # s.setblocking(False)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         return s
     
     def set_gui(self, gui): # Sets the GUI
