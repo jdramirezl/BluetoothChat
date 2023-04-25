@@ -31,9 +31,6 @@ class Connection:
         # Connection port
         self.connection_port = int(port)
         
-        
-
-
         # Commands
         self.self_name = uuid.uuid4().hex[:8]
         self.set_commands()
@@ -42,8 +39,8 @@ class Connection:
     # Setters and getters
     def set_commands(self):
         self.commands = {
-            'name_change': '/NAMECHANGE:',
-            'disconnect': '/DISCONNECT'
+            'name_change': os.getenv("NAMECHANGE"),
+            'disconnect': os.getenv("DISCONNECT"),
         }
 
     def get_socket(self): # Creates a BT socket

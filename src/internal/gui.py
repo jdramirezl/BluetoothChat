@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, ttk
 import os
 import pygame
+from dotenv import load_dotenv
 
 
 def playSound(filename):
@@ -17,6 +18,10 @@ class GUI:
         self.message_scrolledtext.pack(padx=10, pady=10)
         self.message_entry = tk.Entry(self.root, width=50)
         self.message_entry.pack(padx=10, pady=10)
+        
+        # Bind a function to the <Key> event of the message entry
+        self.message_entry.bind("<Key>", self.handle_key)
+        
         self.send_button = tk.Button(self.root, text="Send", command=self.send_message)
         self.send_button.pack(padx=10, pady=10)
         self.connect_button = tk.Button(self.root, text="Connect", command=self.connect_to_server)
@@ -37,6 +42,47 @@ class GUI:
         self.message_scrolledtext.insert(tk.END, message + '\n', tag)
         self.message_scrolledtext.configure(state='disabled')
 
+    def handle_key(self, event):
+        """
+        Function bound to the <Key> event of the message entry.
+        Displays a dropdown menu of possible commands if the first character of the entered text is a "/".
+        """
+        text = event.widget.get()
+        if len(text) == 1 and text.startswith("/"):
+            # Get the possible commands and display them in a dropdown menu
+            commands = self.get_possible_commands()
+            if commands:
+                menu = ttk.Combobox(self.root, values=commands)
+                menu.place(x=self.message_entry.winfo_x(), y=self.message_entry.winfo_y()+self.message_entry.winfo_height())
+                menu.bind("<<ComboboxSelected>>", lambda e: self.handle_command_selection(event, menu))
+                menu.bind("<Escape>", lambda e: menu.destroy())
+                menu.focus_set()
+    
+    def get_possible_commands(self):
+        load_dotenv(dotenv_path='./internal/.commands')
+        
+        c1, c2 = os.getenv("NAMECHANGE"), os.getenv("DISCONNECT")
+        
+        if c1 == None or c2 == None:
+            print("Error: .env file not found or missing variables")
+            return []
+        
+        commands = [
+            c1,
+            c2,
+        ]
+        return commands
+
+    def handle_command_selection(self, event, menu):
+        """
+        Function called when a command is selected from the dropdown menu.
+        Replaces the entered text with the selected command.
+        """
+        command = menu.get()
+        event.widget.delete(0, tk.END)
+        event.widget.insert(0, command)
+        menu.destroy()
+    
     def send_message(self):
         message = self.message_entry.get()
         self.message_entry.delete(0, tk.END)
