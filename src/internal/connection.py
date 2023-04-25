@@ -38,6 +38,7 @@ class Connection:
 
     # Setters and getters
     def set_commands(self):
+        load_dotenv(dotenv_path='./internal/.commands')
         self.commands = {
             'name_change': os.getenv("NAMECHANGE"),
             'disconnect': os.getenv("DISCONNECT"),
