@@ -15,7 +15,6 @@ class Connection:
         
         # Load environment variables from .env file
         load_dotenv()
-        
         self_host = os.getenv("SELFMAC")
         target_host = os.getenv("TARGETMAC")
         port = os.getenv("PORT")
@@ -31,6 +30,8 @@ class Connection:
         
         # Connection port
         self.connection_port = int(port)
+        
+        
 
 
         # Commands
@@ -48,7 +49,7 @@ class Connection:
     def get_socket(self): # Creates a BT socket
         s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
         # s.setblocking(False)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) 
         return s
     
     def set_gui(self, gui): # Sets the GUI
@@ -86,7 +87,7 @@ class Connection:
 
     # Creates a thread to accept incoming connections
     def accept_connections(self): 
-        accept_thread = threading.Thread(target=self.accept_connections)
+        accept_thread = threading.Thread(target=self.receive_connections)
         accept_thread.start()
     
     # Accepts incoming connections
@@ -117,6 +118,8 @@ class Connection:
 
             # If there is no data or the data is the disconnect command, we close the connection
             if not data or data.decode() == self.commands['disconnect']:
+                self.client_sockets.remove(client_socket)
+                client_socket.close()
                 print("Closing connection to " + str(client_socket.getpeername()))
                 break
             
@@ -133,9 +136,21 @@ class Connection:
 
     # Client functions --------------------------------
 
+    def name_check(self, name):
+        
+        
+        if len(name) > 10:
+            return False
+        return True
+
     # Sends a message to all connections
     def send_message(self, message):
         for client_socket in self.client_sockets:
+            if message.startswith(self.commands['name_change']):
+                if not self.name_check(message.replace(self.commands['name_change'], "")):
+                    self.chat_gui.add_message("Name must be less than 10 characters")
+                    return
+            
             encoded_message = bytes(message, "utf-8")
             client_socket.send(encoded_message)
     
