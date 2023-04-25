@@ -2,7 +2,8 @@ import socket
 import threading
 from .gui import GUI 
 import uuid
-
+from dotenv import load_dotenv
+import os
 
 class Connection:
     def __init__(self):
@@ -11,15 +12,26 @@ class Connection:
 
         # Bluetooth socket for self machine. To act as server
         self.bt_socket = self.get_socket()
-
+        
+        # Load environment variables from .env file
+        load_dotenv()
+        
+        self_host = os.getenv("SELFMAC")
+        target_host = os.getenv("TARGETMAC")
+        port = os.getenv("PORT")
+        
+        if self_host == None or target_host == None or port == None:
+            return
+        
         # Self MAC address
-        self.self_host = "14:F6:D8:32:D4:89"
+        self.self_host = self_host
 
         # Target MAC address
-        self.target_host = "00:1A:7D:DA:71:13"
-
+        self.target_host = target_host
+        
         # Connection port
-        self.connection_port = 7
+        self.connection_port = int(port)
+
 
         # Commands
         self.self_name = uuid.uuid4().hex[:8]
