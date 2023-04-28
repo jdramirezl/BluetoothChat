@@ -5,7 +5,7 @@ def main():
     connection = Connection()
     chat_gui = GUI(connection)
     connection.set_gui(chat_gui)
-    connection.start()
+    connection.start_server()
     chat_gui.start()
     
 

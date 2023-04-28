@@ -10,7 +10,7 @@ def playSound(filename):
     pygame.mixer.music.play()
 
 class GUI:
-    def __init__(self, connection):
+    def set_chat_window(self, connection):
         self.connection = connection
         self.root = tk.Tk()
         self.root.title("Bluetooth Chat")
@@ -18,29 +18,33 @@ class GUI:
         self.message_scrolledtext.pack(padx=10, pady=10)
         self.message_entry = tk.Entry(self.root, width=50)
         self.message_entry.pack(padx=10, pady=10)
-        
-        # Bind a function to the <Key> event of the message entry
         self.message_entry.bind("<Key>", self.handle_key)
-        
         self.send_button = tk.Button(self.root, text="Send", command=self.send_message)
         self.send_button.pack(padx=10, pady=10)
         self.connect_button = tk.Button(self.root, text="Connect", command=self.connect_to_server)
         self.connect_button.pack(padx=10, pady=10)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
+    
+    def __init__(self, connection):
+        self.set_chat_window()
         pygame.init()
-
-    def add_message(self, message, is_me=False):
+        
+    def play_sound(self, is_me):
         if is_me:
             playSound("./internal/assets/send.wav")
-            tag = 'me'
         else:
             playSound("./internal/assets/get.wav")
-            tag = 'other'
-        
+            
+    def format_message(self, message, is_me):
+        tag = 'me' if is_me else 'other' 
         self.message_scrolledtext.tag_configure('me', foreground='blue') 
         self.message_scrolledtext.configure(state='normal')
         self.message_scrolledtext.insert(tk.END, message + '\n', tag)
         self.message_scrolledtext.configure(state='disabled')
+
+    def add_message(self, message, is_me=False):
+        self.play_sound(is_me)
+        self.format_message(message, is_me)
 
     def handle_key(self, event):
         """
@@ -49,7 +53,6 @@ class GUI:
         """
         text = event.widget.get()
         if len(text) == 1 and text.startswith("/"):
-            # Get the possible commands and display them in a dropdown menu
             commands = self.get_possible_commands()
             if commands:
                 menu = ttk.Combobox(self.root, values=commands)
