@@ -9,8 +9,8 @@ import os
 class Connection:
     backlog = 2
 
-    def get_socket(self, socket_type):  # Creates a BT socket
-        s = socket.socket(socket_type, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+    def get_socket(self):  # Creates a BT socket
+        s = socket.socket(self.socket_type, socket.SOCK_STREAM)
         # s.setblocking(False)
         # s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
@@ -23,16 +23,16 @@ class Connection:
     def set_tcp_parameter(self):
         self.self_host = os.getenv("SELFIP")
         self.target_host = os.getenv("TARGETIP")
-        self.connection_port = os.getenv("TCP_PORT")
+        self.connection_port = int(os.getenv("TCP_PORT"))
 
     def set_connection(self, socket_type):
-        self.bt_socket = self.get_socket(socket_type)
+        self.bt_socket = self.get_socket()
         load_dotenv()
-        if socket_type == socket.AF_BLUETOOH:
-            self.set_bluetooth_parameter()
-        elif socket_type == socket.AF_INET:
+        # if socket_type == socket.AF_BLUETOOH:
+        #     self.set_bluetooth_parameter()
+        if socket_type == socket.AF_INET:
             self.set_tcp_parameter()
-        if self.self_host is None or self.target_host == None or self.port == None:
+        if self.self_host is None or self.target_host == None or self.connection_port == None:
             raise "Socket parameters not passed"
         self.self_name = uuid.uuid4().hex[:8]
 
@@ -45,6 +45,7 @@ class Connection:
 
     def __init__(self, socket_type):
         self.client_sockets = []
+        self.socket_type = socket_type
         self.set_connection(socket_type)
         self.set_commands()
 
@@ -97,7 +98,7 @@ class Connection:
         while True:
             data = client_socket.recv(1024)
             data = data.decode() if data is not None else None
-            if data or data == self.commands["disconnect"]:
+            if data == self.commands["disconnect"]:
                 self.client_disconnect()
                 break
             nchange = self.commands["name_change"]
