@@ -125,7 +125,6 @@ class Connection:
 
             encoded_message = bytes(message, "utf-8")
             encoded_message = bytes(str(len(encoded_message)) + " ", "utf-8") + encoded_message
-            # print(encoded_message.decode())
             client_socket.send(encoded_message)
 
     def start_client(self):
@@ -134,4 +133,3 @@ class Connection:
         self.client_sockets.append(client_socket)
         self.chat_gui.add_message("Connected to " + str(self.target_host))
         self.set_name(self.self_name)
-        self.accept_messages(client_socket)
