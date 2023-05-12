@@ -98,6 +98,7 @@ class Connection:
         while True:
             data = client_socket.recv(1024)
             data_length = int(data.decode().split()[0]) if data is not None else None
+            data_length =  data_length - len(bytes(str(data_length) + " ", "utf-8"))
             if data is None or data == self.commands["disconnect"]:
                 self.client_disconnect()
                 break
