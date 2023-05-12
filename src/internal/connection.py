@@ -97,10 +97,13 @@ class Connection:
         ChatName = "Unknown"
         while True:
             data = client_socket.recv(1024)
-            data = data.decode() if data is not None else None
-            if data == self.commands["disconnect"]:
+            data_length = data.decode().split()[0] if data is not None else None
+            if data is None or data == self.commands["disconnect"]:
                 self.client_disconnect()
                 break
+            while len(data) < data_length:
+                data += client_socket.recv(1024)
+            data = ' '.join(data.decode().split[1:])
             nchange = self.commands["name_change"]
             if data.startswith(nchange):
                 ChatName = data.replace(nchange, "")
@@ -121,6 +124,8 @@ class Connection:
                 return
 
             encoded_message = bytes(message, "utf-8")
+            encoded_message = bytes(str(len(encoded_message)) + " ", "utf-8") + encoded_message
+            # print(encoded_message.decode())
             client_socket.send(encoded_message)
 
     def start_client(self):
