@@ -10,16 +10,17 @@ class Connection:
     backlog = 2
     
     def set_bluetooth_socket(self):
-        s = socket.socket(self.socket_type, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-        return s
+        pass
+    #     s = socket.socket(self.socket_type, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+    #     return s
     
     def set_tcp_socket(self):
         s = socket.socket(self.socket_type, socket.SOCK_STREAM)
         return s
 
-    def get_socket(self, socket_type):  # Creates a BT socket
-        if self.socket_type == socket.AF_BLUETOOH:
-            s = self.set_bluetooth_socket()
+    def get_socket(self):  # Creates a BT socket
+        # if self.socket_type == socket.AF_BLUETOOH:
+        #     s = self.set_bluetooth_socket()
         if self.socket_type == socket.AF_INET:
             s = self.set_tcp_socket()
         # s.setblocking(False)
@@ -39,8 +40,8 @@ class Connection:
     def set_connection(self):
         self.bt_socket = self.get_socket()
         load_dotenv()
-        if self.socket_type == socket.AF_BLUETOOH:
-            self.set_bluetooth_parameter()
+        # if self.socket_type == socket.AF_BLUETOOH:
+        #     self.set_bluetooth_parameter()
         if self.socket_type == socket.AF_INET:
             self.set_tcp_parameter()
         if self.self_host is None or self.target_host == None or self.connection_port == None:
