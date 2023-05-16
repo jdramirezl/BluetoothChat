@@ -110,13 +110,16 @@ class Connection:
         while True:
             data = client_socket.recv(1024)
             data_length = int(data.decode().split()[0]) if data is not None else None
-            data_length =  data_length - len(bytes(str(data_length) + " ", "utf-8"))
-            if data is None or data == self.commands["disconnect"]:
+            if data is None:
                 self.client_disconnect()
                 break
+            data_length =  data_length - len(bytes(str(data_length) + " ", "utf-8"))
             while len(data) < data_length:
                 data += client_socket.recv(1024)
             data = ' '.join(data.decode().split()[1:])
+            if data == self.commands["disconnect"]:
+                self.client_disconnect()
+                break
             nchange = self.commands["name_change"]
             if data.startswith(nchange):
                 ChatName = data.replace(nchange, "")
