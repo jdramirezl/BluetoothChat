@@ -102,8 +102,8 @@ class Connection:
 
     def client_disconnect(self, client_socket):
         self.client_sockets.remove(client_socket)
+        self.chat_gui.add_message("Closing connection to " + str(client_socket.getpeername()))
         client_socket.close()
-        print("Closing connection to " + str(client_socket.getpeername()))
 
     def receive_message(self, client_socket):
         ChatName = "Unknown"
@@ -111,14 +111,14 @@ class Connection:
             data = client_socket.recv(1024)
             data_length = int(data.decode().split()[0]) if data is not None else None
             if data is None:
-                self.client_disconnect()
+                self.client_disconnect(client_socket)
                 break
             data_length =  data_length - len(bytes(str(data_length) + " ", "utf-8"))
             while len(data) < data_length:
                 data += client_socket.recv(1024)
             data = ' '.join(data.decode().split()[1:])
             if data == self.commands["disconnect"]:
-                self.client_disconnect()
+                self.client_disconnect(client_socket)
                 break
             nchange = self.commands["name_change"]
             if data.startswith(nchange):
